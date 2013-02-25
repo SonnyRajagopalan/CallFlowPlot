@@ -90,5 +90,32 @@
 				Here's a little something for you!
 			</Description>
 		</Flow>
+
+		<Flow>
+			<From>
+				ne2
+			</From>
+			<To>
+				ne2
+			</To>
+			<Description>
+				Silly internal flow!
+			</Description>
+		</Flow>
+		<Flow>
+			<FromTo>
+				True
+			</FromTo>
+			<From>
+				ne2
+			</From>
+			<To>
+				ne1
+			</To>
+			<Description>
+				Silly fromto flow.
+			</Description>
+		</Flow>
+
 	</Plot>
 </CallFlow>

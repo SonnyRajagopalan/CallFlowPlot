@@ -1,0 +1,11 @@
+#!/usr/bin/python
+
+# import sys
+# sys.path.append ("..")
+from .. profiles import *
+
+def setProfile ():
+    "Returns a profile object that is composed of the default parameters"
+    profile = profiles.cfpProfile.CFPProfile ()
+
+    return profile

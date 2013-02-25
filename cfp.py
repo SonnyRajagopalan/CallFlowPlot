@@ -5,10 +5,16 @@ from xml.dom.minidom import parseString
 from xml.dom.minidom import Node
 import sys
 
+import CFPPlotProfile
+
+# Global call flow parameters
+
 nodeNames = []
 nodeIDs = []
 flows = []
-svgFile = ""
+
+# Global profile information
+cfNodeType = ""
 
 def getNodes (dom):
     "Get the nodes in the plot"
@@ -61,7 +67,7 @@ def getFlows (dom):
                             toNodes.append (toNode)
                         elif item.nodeName == "Description":
                             desc  = item.childNodes[0].nodeValue.strip ()
-                print fromNode, "->", toNodes, "(", desc, ")"
+                #print fromNode, "->", toNodes, "(", desc, ")"
                 flows.append (plot)
 
     return
@@ -81,8 +87,8 @@ def createNodeGraphics (svgFile):
 
     svgFile.write ("  <defs>")
     svgFile.write ("    <linearGradient id=\"grad1\" x1=\"0%\" y1=\"0%\" x2=\"100%\" y2=\"0%\">")
-    svgFile.write ("      <stop offset=\"0%\" style=\"stop-color:rgb(255,255,0);stop-opacity:1\" />")
-    svgFile.write ("      <stop offset=\"100%\" style=\"stop-color:rgb(255,0,0);stop-opacity:1\" />")
+    svgFile.write ("      <stop offset=\"0%\" style=\"stop-color: #D4E7ED;stop-opacity:1\" />")
+    svgFile.write ("      <stop offset=\"100%\" style=\"stop-color: #EB8540;stop-opacity:1\" />")
     svgFile.write ("    </linearGradient>")
     svgFile.write ("<marker id=\"Triangle\"")
     svgFile.write (" viewBox=\"0 0 10 10\" refX=\"0\" refY=\"5\"")
@@ -105,7 +111,7 @@ def drawNodes (svgFile):
     strx = 100
     stry = 110
     vertLineLen = cy + (len (flows) * 100) + 20
-    print "len (flows) = ", len (flows)
+    #print "len (flows) = ", len (flows)
     for nodeID in nodeIDs:
         strx = cx - 20
         string = "  <ellipse cx=\""+`cx`+"\" cy=\""+`cy`+"\" rx=\""+`rx`+"\" ry=\""+`ry`+"\" fill=\"url(#grad1)\" />"
@@ -119,13 +125,105 @@ def drawNodes (svgFile):
 
     return
 
-def plotTheFlows (dom, svgFile):
-    "Plot the flows between the nodes"
+def plotAFlow (svgFile, fromNode, toNodes, desc, fromToFlag, cy):
+    "Plots one flow"
+    #print fromNode, "->", toNodes, "(", desc, ")"
+    # Write 100 px below last
+    # cx = from node
+    # cy = first to node
+    # What will you do if from == to?
 
     startx = 100
     cx = 100
-    cy = 200
     endx = 100 + (len (nodeIDs) - 1) * 400
+    fromIndex = getNodeIDIndex (fromNode)
+    fromX = startx + (fromIndex * 400)
+
+    for toNode in toNodes:
+        toIndex = getNodeIDIndex (toNode)    
+        toX   = startx + (toIndex * 400)
+
+        print "Trying to plot..."
+    
+        if fromToFlag == False:
+            print "False"
+            if toIndex > fromIndex: # right to left arrow
+                # Draw the line
+                svgFile.write ("<path d=\"M "+`fromX`+" "+`cy`+" L "+`toX-40`+" "+`cy`+"\"")
+                svgFile.write (" fill=\"none\" stroke=\"steelblue\" stroke-width=\"10\" stroke-opacity=\"0.5\" />")
+                # Draw the arrow head
+                svgFile.write ("<path d=\"M "+`toX-40`+" "+`cy`+ " L "+`toX-40`+ " " + `cy-10`+ " L " + `toX` + " " 
+                               + `cy` + " L " + `toX-40` + " " + `cy + 10` + " z \"")
+                svgFile.write (" fill=\"steelblue\" fill-opacity=\"0.5\" stroke=\"steelblue\"  stroke-opacity=\"0.5\" />")
+                # Add the text description
+                svgFile.write ("<text font-family=\"Monospace\" font-size=\"12\" x=\""+`fromX+10`+"\" y=\""+`cy-15`+
+                               "\" style=\"stroke: #EB8540; fill: #EB8540\">")
+                svgFile.write (desc)
+                svgFile.write ("</text>")
+            elif toIndex < fromIndex: # left to right arrow
+                # Draw the line
+                svgFile.write ("<path d=\"M "+`toX+40`+" "+`cy`+" L "+`fromX`+" "+`cy`+"\"")
+                svgFile.write (" fill=\"none\" stroke=\"steelblue\" stroke-width=\"10\" stroke-opacity=\"0.5\" />")
+                # Draw the arrow head
+                svgFile.write ("<path d=\"M "+`toX+40`+" "+`cy`+ " L "+`toX+40`+ " " + `cy-10`+ " L " + `toX` + " " +
+                               `cy` + " L " + `toX+40` + " " + `cy + 10` + " z \"")
+                svgFile.write (" fill=\"steelblue\" fill-opacity=\"0.5\" stroke=\"steelblue\"  stroke-opacity=\"0.5\" />")
+                # Add the text description
+                svgFile.write ("<text font-family=\"Monospace\" font-size=\"12\" x=\""+`toX+10`+"\" y=\""+`cy-15`+
+                               "\" style=\"stroke: #EB8540; fill: #EB8540\">")
+                svgFile.write (desc)
+                svgFile.write ("</text>")
+            elif toIndex == fromIndex:
+                # Internal flow: span (toX + 10, cy + 40) to (toX + 10, cy - 40)
+                svgFile.write ("<path d=\"M " + `toX+10` + " " + `cy+20` + " C " + `toX+80` + " " + `cy+20` + " " + 
+                               `toX+80` + " " + `cy-20` + " " + `toX+10` + " " + `cy-20` + 
+                               "\" stroke=\"steelblue\" stroke-width=\"10\" stroke-opacity=\"0.5\" fill=\"none\"/>")
+                svgFile.write ("<path d=\"M " + `toX+10` + " " + `cy-25` + " L " + `toX` + " " + `cy-20` + " " 
+                               + `toX + 10` + " " + `cy - 15` + 
+                               "\" stroke=\"steelblue\" stroke-width=\"6\" stroke-opacity=\"0.5\"" + 
+                               " fill=\"steelblue\" fill-opacity=\"0.5\"/>")
+
+        elif fromToFlag == True:
+
+            startX = -1
+            endX   = -1
+
+            if toIndex < fromIndex:
+                startX = toX
+                endX   = fromX
+            elif toIndex > fromIndex:
+                startX = fromX
+                endX   - toX
+            else:
+                # Error
+                pass
+
+            # Draw the line
+            svgFile.write ("<path d=\"M "+`startX+40`+" "+`cy`+" L "+`endX-40`+" "+`cy`+"\"")
+            svgFile.write (" fill=\"none\" stroke=\"green\" stroke-width=\"20\" stroke-opacity=\"0.5\" />")
+            # Draw the arrow head to the left
+            svgFile.write ("<path d=\"M "+`startX+40`+" "+`cy`+ " L "+`startX+40`+ " " + `cy-15`+ " L " + `startX` + " " +
+                           `cy` + " L " + `startX+40` + " " + `cy + 15` + " z \"")
+            svgFile.write (" fill=\"green\" fill-opacity=\"0.5\" stroke=\"green\"  stroke-opacity=\"0.5\" />")
+
+            # Draw the arrow head to the right
+            svgFile.write ("<path d=\"M "+`endX-40`+" "+`cy`+ " L "+`endX-40`+ " " + `cy-15`+ " L " + `endX` + " " +
+                           `cy` + " L " + `endX-40` + " " + `cy + 15` + " z \"")
+            svgFile.write (" fill=\"green\" fill-opacity=\"0.5\" stroke=\"green\"  stroke-opacity=\"0.5\" />")
+            # Add the text description
+            svgFile.write ("<text font-family=\"Monospace\" font-size=\"12\" x=\""+`startX+10`+"\" y=\""+`cy-15`+
+                           "\" style=\"stroke: #EB8540; fill: #EB8540\">")
+            svgFile.write (desc)
+            svgFile.write ("</text>")
+            
+    return
+
+def plotTheFlows (dom, svgFile):
+    "Plot the flows between the nodes"
+
+    cy = 200
+    fromToFlag = False
+
     plotXML = dom.getElementsByTagName ("Plot")[0]
     #print flowList, flowList.length
     if plotXML == None:
@@ -146,44 +244,21 @@ def plotTheFlows (dom, svgFile):
                             toNodes.append (toNode)
                         elif item.nodeName == "Description":
                             desc  = item.childNodes[0].nodeValue.strip ()
+                        elif item.nodeName == "FromTo":
+                            print "FromTo"
+                            fromToFlag = True
 
-                #print fromNode, "->", toNodes, "(", desc, ")"
-                # Write 100 px below last
-                # cx = from node
-                # cy = first to node
-                # What will you do if from == to?
-                fromIndex = getNodeIDIndex (fromNode)
-                toIndex = getNodeIDIndex (toNodes[0])
+                # Great place for validity checks
+                # Cannot have multiple "From" items.
+                # Should have atleast one "From" item
+                # If fromToFlag == True, then cannot have multiple "To" items
+                # Description cannot be null or empty string
+                # Cannot have multiple description items
+                print "Calling plotAFlow with",svgFile, fromNode, toNodes, desc, fromToFlag, cy
+                plotAFlow (svgFile, fromNode, toNodes, desc, fromToFlag, cy)
 
-                fromX = startx + (fromIndex * 400)
-                toX   = startx + (toIndex * 400)
+                cy = cy + 100
 
-                if fromToArrowsFlag == False:
-                    if toIndex > fromIndex: # right to left arrow
-                        # Draw the line
-                        svgFile.write ("<path d=\"M "+`fromX`+" "+`cy`+" L "+`toX-40`+" "+`cy`+"\"")
-                        svgFile.write (" fill=\"none\" stroke=\"steelblue\" stroke-width=\"10\" stroke-opacity=\"0.5\" />")
-                        # Draw the arrow head
-                        svgFile.write ("<path d=\"M "+`toX-40`+" "+`cy`+ " L "+`toX-40`+ " " + `cy-10`+ " L " + `toX` + " " + `cy` + " L " + `toX-40` + " " + `cy + 10` + " z \"")
-                        svgFile.write (" fill=\"steelblue\" fill-opacity=\"0.5\" stroke=\"steelblue\"  stroke-opacity=\"0.5\" />")
-                        # Add the text description
-                        svgFile.write ("<text font-family=\"Monospace\" font-size=\"12\" x=\""+`fromX+10`+"\" y=\""+`cy-15`+"\" style=\"stroke: peru; fill: peru\">")
-                    else: # left to right arrow
-                        # Draw the line
-                        svgFile.write ("<path d=\"M "+`toX+40`+" "+`cy`+" L "+`fromX`+" "+`cy`+"\"")
-                        svgFile.write (" fill=\"none\" stroke=\"steelblue\" stroke-width=\"10\" stroke-opacity=\"0.5\" />")
-                        # Draw the arrow head
-                        svgFile.write ("<path d=\"M "+`toX+40`+" "+`cy`+ " L "+`toX+40`+ " " + `cy-10`+ " L " + `toX` + " " + `cy` + " L " + `toX+40` + " " + `cy + 10` + " z \"")
-                        svgFile.write (" fill=\"steelblue\" fill-opacity=\"0.5\" stroke=\"steelblue\"  stroke-opacity=\"0.5\" />")
-                        # Add the text description
-                        svgFile.write ("<text font-family=\"Monospace\" font-size=\"12\" x=\""+`toX+10`+"\" y=\""+`cy-15`+"\" style=\"stroke: peru; fill: peru\">")
-                    
-                    svgFile.write (desc)
-                    svgFile.write ("</text>")
-
-                    cy = cy + 100
-                elif fromToArrowsFlag == True:
-                    # Nothing
     return
 
 
@@ -194,9 +269,9 @@ file.close ()
 dom = parseString (data)
 
 getNodes (dom)
-print "Here are the nodes"
-print nodeNames
-print nodeIDs
+# print "Here are the nodes"
+# print nodeNames
+# print nodeIDs
 
 getFlows (dom)
 svgFile = open ("/tmp/output.svg", "w")

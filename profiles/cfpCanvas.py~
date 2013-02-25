@@ -1,0 +1,7 @@
+#!/usr/bin/python
+
+class CFPCanvas:
+    # default values
+
+    canvasWidth = ""
+    canvasHeight = ""

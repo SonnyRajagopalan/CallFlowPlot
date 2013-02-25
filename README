@@ -7,3 +7,44 @@ Input file: Call flow file: example.cff
 Output file: SVG
 
 First working version: 02/23/2013.
+
+Things to add in V1.0
+=====================
+
+(a) FromTo flows. These flows are used when  we want to abstract a number of call flows we
+are not interested in showing the details for.
+
+    For example,  for an application  (L5) interaction, it  makes no sense to  discuss TCP
+    3-way handshake open and TCP close. In this case, we will show the TCP 3-way handshake
+    as a FromTo flow. Typical uses of FromTo flows are: (1) Showing existing states in the
+    beginning of a callflow. Example: a  3G data connection is already open before setting
+    up a web services connection to a  data center over the Internet (presumably using the
+    3G data connection).  (2) Abstracting protocol activity in layers that are no interest
+    to the reader (e.g., DNS discovery when discussing a BitTorrent interaction).
+
+(b) Check call flow file (*.cff) validity.
+
+(c) Self references  in the call flows. To show import/pertinent  processing that the node
+    does internally.
+
+(d) Multiple "to" nodes support.
+
+(e) Placing text in a more sophisticated fashion. Multi-line text and word-wraps.
+
+(f) Anchor nodes--to show the importance of some nodes spanning the call flow. For example,
+   in a 3G/WiFi multi access scenario, it is  important to show that the IP anchor is both
+   at the WLAN AP and the PGW.
+
+(g) Color profiles: Need to be able to change the colors of the text, nodes, arrows, arrow
+    heads. Also need to be able to change the shape of the nodes.
+
+(h) Clickable SVG  portions. For example, click an arrow, and  contents of the application
+    layer PDU show on another page.
+
+(i) Generate MS-Office usable pictures. SVG  is not an MS-office recognizable format. Turn
+    the        SVG       to       PNG.        Check       out        PythonMagick       at
+    http://stackoverflow.com/questions/1740158/documents-and-examples-of-pythonmagick
+
+(j) Extra credit: Take an arbitrary wireshark dump (pcap file) and a filter text and apply
+    the filter and generate  the call flow from the pcap file,  with clickable details for
+    the flows.

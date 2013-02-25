@@ -1,0 +1,22 @@
+#!/usr/bin/python
+
+class NodeProfile:
+    # default values
+    nodeFillColor = "white"
+    nodeTextColor = "black"
+    nodeBorderColor = "black"
+    nodeType = Type.SQUARE
+    nodeStrokeWidth = "2"
+    nodeStrokeDasharray = False
+    nodeStrokeDasharrayValue = ""
+    nodeStrokeWidth = "2"
+
+
+    nodeStemFillColor = "white"
+    nodeStemTextColor = "black"
+    nodeStemBorderColor = "black"
+    nodeStemStrokeWidth = "2"
+    nodeStemStrokeDasharray = False
+    nodeStemStrokeDasharrayValue = ""
+    nodeStemStrokeWidth = "2"
+
