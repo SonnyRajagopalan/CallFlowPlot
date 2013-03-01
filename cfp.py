@@ -1,127 +1,121 @@
 #!/usr/bin/python
 
+# Python module imports
 import xml.dom.minidom
 from xml.dom.minidom import parseString
 from xml.dom.minidom import Node
 import sys
 
-import CFPPlotProfile
+# CFP specific
+from cfp.session.cfpSession import CFPSession
+from cfp.draw import cfpDraw
 
-# Global call flow parameters
+def setProfileToUse (dom):
+    "Gets the information about the correct profile to use"
+        
+    try:
+        profXml = dom.getElementsByTagName ("Profile")
+        prof = ((profXml[0].childNodes)[0].nodeValue).strip ()
+    
+        if prof.upper () == "DEFAULT":
+            import cfp.profiles.templates.cfpDefault
+            session.setProfile (cfp.profiles.templates.cfpDefault.getProfile ()) # Get profile from singleton object
+            #print "My profile name is " + session.getProfile ().getName ()
+        elif prof.upper () == "TANGO": # TBD profile
+            pass
+        elif prof.upper () == "BORING": # TBD profile
+            pass
+        elif prof.upper () == "BLAH": # TBD profile
+            pass
 
-nodeNames = []
-nodeIDs = []
-flows = []
+    except IndexError:
+        print "No user defined profile information found. Set to default."
+        import cfp.profiles.templates.cfpDefault
+        session.setProfile (cfp.profiles.templates.cfpDefault.getProfile ()) # Get profile from singleton object
+        
+    return
 
-# Global profile information
-cfNodeType = ""
+def setOutput (dom):
+    "Sets the output for the call flow"
+
+    try:
+        outputXml = dom.getElementsByTagName ("Output")
+        output = ((outputfXml[0].childNodes)[0].nodeValue).strip ()
+        session.setTitle (output)
+    except IndexError:
+        pass
+        
+    return
+
+def setTitle (dom):
+    "Sets the title for the call flow"
+
+    try:
+        titleXml = dom.getElementsByTagName ("Title")
+        title = ((titlefXml[0].childNodes)[0].nodeValue).strip ()
+        session.setTitle (title)
+    except IndexError:
+        session.setTitle (session.output)
+        
+    return
 
 def getNodes (dom):
     "Get the nodes in the plot"
+
     nodeList = dom.getElementsByTagName ("Node")
-    #print nodeList
-    for node in nodeList:
-        children = node.getElementsByTagName ("Name")[0].childNodes
-        for child in children:
-            nodeNameValue = children[0].nodeValue
-            nodeNameValue = nodeNameValue.strip ()
-            nodeNames.append (nodeNameValue)
 
-        children = node.getElementsByTagName ("ID")[0].childNodes
-        for child in children:
-            nodeIDValue = children[0].nodeValue
-            nodeIDValue = nodeIDValue.strip ()
-            nodeIDs.append (nodeIDValue)
-    return
-
-def getNodeIDIndex (nID):
-    "Returns the nodeID index"
-    nodeIDIndex = 0
-
-    for nodeID in nodeIDs:
-        if nodeID == nID:
-            return nodeIDIndex
-        else:
-            nodeIDIndex = nodeIDIndex + 1
+    if nodeList == []:
+        sys.exit ("No <Node/> elements found? Check *.cff file. Aborting!")
             
-    return -1
+    for node in nodeList:
+
+        try:
+            children = node.getElementsByTagName ("Name")[0].childNodes
+            for child in children:
+                nodeNameValue = children[0].nodeValue
+                nodeNameValue = nodeNameValue.strip ()
+                #nodeNames.append (nodeNameValue)
+                session.addANodeName (nodeNameValue)
+        except IndexError:
+            sys.exit ("No <Name/> tag for Node? Check *.cff file. Aborting!")
+
+        try:
+            children = node.getElementsByTagName ("ID")[0].childNodes
+            for child in children:
+                nodeIDValue = children[0].nodeValue
+                nodeIDValue = nodeIDValue.strip ()
+                #session.getNodeIDs ().append (nodeIDValue)
+                session.addANodeID (nodeIDValue)
+        except IndexError:
+            sys.exit ("No <ID/> tag for Node? Check *.cff file. Aborting!")
+
+    return
 
 def getFlows (dom):
     "Get all the flows in the call flow"
     
-    plotXML = dom.getElementsByTagName ("Plot")[0]
+    try:
+        plotXML = dom.getElementsByTagName ("Plot")[0]
     #print flowList, flowList.length
-    if plotXML == None:
-        print "Error"
-    else:
-        for plot in plotXML.childNodes:
-            if plot.nodeType != Node.TEXT_NODE:
-                if plot.nodeName == "Flow":
-                    fromNode = ""
-                    toNodes = []
-                    for item in plot.childNodes:
-                        if item.nodeName == "From":
-                            fromNode = item.childNodes[0].nodeValue.strip ()
-                        elif item.nodeName == "To":
-                            toNode  = item.childNodes[0].nodeValue.strip ()
-                            toNodes.append (toNode)
-                        elif item.nodeName == "Description":
-                            desc  = item.childNodes[0].nodeValue.strip ()
+    except IndexError:
+        sys.exit ("No <Plot/> tag found in *.cff file! Aborting")
+    
+    for flow in plotXML.childNodes:
+        if flow.nodeType != Node.TEXT_NODE:
+            if flow.nodeName == "Flow":
+                fromNode = ""
+                toNodes = []
+                for item in flow.childNodes:
+                    if item.nodeName == "From":
+                        fromNode = item.childNodes[0].nodeValue.strip ()
+                    elif item.nodeName == "To":
+                        toNode  = item.childNodes[0].nodeValue.strip ()
+                        toNodes.append (toNode)
+                    elif item.nodeName == "Description":
+                        desc  = item.childNodes[0].nodeValue.strip ()
                 #print fromNode, "->", toNodes, "(", desc, ")"
-                flows.append (plot)
-
-    return
-                            
-
-# Generate the SVG
-def writePreamble (svgFile):
-    "Write the SVG preambles to output.svg"
-
-    svgFile.write ("<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\">")
-
-    return
-
-
-def createNodeGraphics (svgFile):
-    "Create the defs for the nodes"
-
-    svgFile.write ("  <defs>")
-    svgFile.write ("    <linearGradient id=\"grad1\" x1=\"0%\" y1=\"0%\" x2=\"100%\" y2=\"0%\">")
-    svgFile.write ("      <stop offset=\"0%\" style=\"stop-color: #D4E7ED;stop-opacity:1\" />")
-    svgFile.write ("      <stop offset=\"100%\" style=\"stop-color: #EB8540;stop-opacity:1\" />")
-    svgFile.write ("    </linearGradient>")
-    svgFile.write ("<marker id=\"Triangle\"")
-    svgFile.write (" viewBox=\"0 0 10 10\" refX=\"0\" refY=\"5\"")
-    svgFile.write (" markerUnits=\"strokeWidth\"")
-    svgFile.write (" markerWidth=\"14\" markerHeight=\"2\"")
-    svgFile.write (" orient=\"auto\">")
-    svgFile.write ("<path d=\"M 0 0 L 10 5 L 0 10 z\" />")
-    svgFile.write ("</marker>")
-    svgFile.write ("  </defs>")
-
-    return
-
-def drawNodes (svgFile):
-    "Draw the nodes"
-
-    cx = 100
-    cy = 100
-    rx = 50
-    ry = 25
-    strx = 100
-    stry = 110
-    vertLineLen = cy + (len (flows) * 100) + 20
-    #print "len (flows) = ", len (flows)
-    for nodeID in nodeIDs:
-        strx = cx - 20
-        string = "  <ellipse cx=\""+`cx`+"\" cy=\""+`cy`+"\" rx=\""+`rx`+"\" ry=\""+`ry`+"\" fill=\"url(#grad1)\" />"
-        svgFile.write (string)
-        svgFile.write ("<line x1=\""+`cx`+"\" y1=\""+`cy+25`+"\" x2=\""+`cx`+"\" y2=\""+`vertLineLen`+"\" ")
-        svgFile.write (" style=\"stroke:rgb(128,128,128);stroke-width:5\" stroke-opacity=\"0.5\"/>")
-        svgFile.write ("<text fill=\"#ffffff\" font-size=\"25\" font-family=\"Verdana\" x=\""+`strx`+"\" y=\""+`stry`+"\">")
-        svgFile.write (nodeID+"</text>")
-
-        cx = cx + 400
+            session.addAFlow (flow)
+            #flows.append (flow)
 
     return
 
@@ -133,21 +127,25 @@ def plotAFlow (svgFile, fromNode, toNodes, desc, fromToFlag, cy):
     # cy = first to node
     # What will you do if from == to?
 
-    startx = 100
-    cx = 100
-    endx = 100 + (len (nodeIDs) - 1) * 400
-    fromIndex = getNodeIDIndex (fromNode)
-    fromX = startx + (fromIndex * 400)
+    startx = session.getProfile ().getCanvasProfile ().getUsableX1 ()
+    cx = session.getProfile ().getCanvasProfile ().getUsableX1 ()
+    endx = cx + (len (session.getNodeIDs ()) - 1) * session.getProfile ().getNodeStemProfile ().getSeparation ()
+    #fromIndex = getNodeIDIndex (fromNode)
+    fromIndex = session.getNodeIndex (fromNode)
+    fromX = startx + (fromIndex * session.getProfile ().getNodeStemProfile ().getSeparation ())
 
     for toNode in toNodes:
-        toIndex = getNodeIDIndex (toNode)    
-        toX   = startx + (toIndex * 400)
+        #toIndex = getNodeIDIndex (toNode)    
+        toIndex = session.getNodeIndex (toNode)    
+        toX   = startx + (toIndex * session.getProfile ().getNodeStemProfile ().getSeparation ())
 
-        print "Trying to plot..."
+        #print "Trying to plot..."
     
         if fromToFlag == False:
-            print "False"
+            #print "False"
             if toIndex > fromIndex: # right to left arrow
+                toIndex = toIndex - 5
+                fromIndex = fromIndex + 5
                 # Draw the line
                 svgFile.write ("<path d=\"M "+`fromX`+" "+`cy`+" L "+`toX-40`+" "+`cy`+"\"")
                 svgFile.write (" fill=\"none\" stroke=\"steelblue\" stroke-width=\"10\" stroke-opacity=\"0.5\" />")
@@ -156,11 +154,13 @@ def plotAFlow (svgFile, fromNode, toNodes, desc, fromToFlag, cy):
                                + `cy` + " L " + `toX-40` + " " + `cy + 10` + " z \"")
                 svgFile.write (" fill=\"steelblue\" fill-opacity=\"0.5\" stroke=\"steelblue\"  stroke-opacity=\"0.5\" />")
                 # Add the text description
-                svgFile.write ("<text font-family=\"Monospace\" font-size=\"12\" x=\""+`fromX+10`+"\" y=\""+`cy-15`+
+                svgFile.write ("<text font-family=\"Monospace\" font-size=\"20\" x=\""+`fromX+10`+"\" y=\""+`cy-15`+
                                "\" style=\"stroke: #EB8540; fill: #EB8540\">")
                 svgFile.write (desc)
                 svgFile.write ("</text>")
             elif toIndex < fromIndex: # left to right arrow
+                toIndex = toIndex + 5
+                fromIndex = fromIndex - 5
                 # Draw the line
                 svgFile.write ("<path d=\"M "+`toX+40`+" "+`cy`+" L "+`fromX`+" "+`cy`+"\"")
                 svgFile.write (" fill=\"none\" stroke=\"steelblue\" stroke-width=\"10\" stroke-opacity=\"0.5\" />")
@@ -169,7 +169,7 @@ def plotAFlow (svgFile, fromNode, toNodes, desc, fromToFlag, cy):
                                `cy` + " L " + `toX+40` + " " + `cy + 10` + " z \"")
                 svgFile.write (" fill=\"steelblue\" fill-opacity=\"0.5\" stroke=\"steelblue\"  stroke-opacity=\"0.5\" />")
                 # Add the text description
-                svgFile.write ("<text font-family=\"Monospace\" font-size=\"12\" x=\""+`toX+10`+"\" y=\""+`cy-15`+
+                svgFile.write ("<text font-family=\"Monospace\" font-size=\"20\" x=\""+`toX+10`+"\" y=\""+`cy-15`+
                                "\" style=\"stroke: #EB8540; fill: #EB8540\">")
                 svgFile.write (desc)
                 svgFile.write ("</text>")
@@ -182,6 +182,11 @@ def plotAFlow (svgFile, fromNode, toNodes, desc, fromToFlag, cy):
                                + `toX + 10` + " " + `cy - 15` + 
                                "\" stroke=\"steelblue\" stroke-width=\"6\" stroke-opacity=\"0.5\"" + 
                                " fill=\"steelblue\" fill-opacity=\"0.5\"/>")
+                # Add the text description
+                svgFile.write ("<text font-family=\"Monospace\" font-size=\"20\" x=\""+`toX+70`+"\" y=\""+`cy+10`+
+                               "\" style=\"stroke: #EB8540; fill: #EB8540\">")
+                svgFile.write (desc)
+                svgFile.write ("</text>")
 
         elif fromToFlag == True:
 
@@ -189,14 +194,16 @@ def plotAFlow (svgFile, fromNode, toNodes, desc, fromToFlag, cy):
             endX   = -1
 
             if toIndex < fromIndex:
-                startX = toX
-                endX   = fromX
+                startX = toX + 5
+                endX   = fromX - 5
             elif toIndex > fromIndex:
-                startX = fromX
-                endX   - toX
+                startX = fromX + 5
+                endX   = toX - 5
             else:
                 # Error
                 pass
+
+            #print "For FromTo: startX = ",startX,", endX = ", endX
 
             # Draw the line
             svgFile.write ("<path d=\"M "+`startX+40`+" "+`cy`+" L "+`endX-40`+" "+`cy`+"\"")
@@ -211,7 +218,7 @@ def plotAFlow (svgFile, fromNode, toNodes, desc, fromToFlag, cy):
                            `cy` + " L " + `endX-40` + " " + `cy + 15` + " z \"")
             svgFile.write (" fill=\"green\" fill-opacity=\"0.5\" stroke=\"green\"  stroke-opacity=\"0.5\" />")
             # Add the text description
-            svgFile.write ("<text font-family=\"Monospace\" font-size=\"12\" x=\""+`startX+10`+"\" y=\""+`cy-15`+
+            svgFile.write ("<text font-family=\"Monospace\" font-size=\"20\" x=\""+`startX+10`+"\" y=\""+`cy-15`+
                            "\" style=\"stroke: #EB8540; fill: #EB8540\">")
             svgFile.write (desc)
             svgFile.write ("</text>")
@@ -221,20 +228,18 @@ def plotAFlow (svgFile, fromNode, toNodes, desc, fromToFlag, cy):
 def plotTheFlows (dom, svgFile):
     "Plot the flows between the nodes"
 
-    cy = 200
+    cy = session.getProfile ().getCanvasProfile ().getUsableY1 () + (session.getProfile ().getNodeProfile ().getYSize () * 5)
     fromToFlag = False
 
-    plotXML = dom.getElementsByTagName ("Plot")[0]
-    #print flowList, flowList.length
-    if plotXML == None:
-        print "Error"
-    else:
+    try:
+        plotXML = dom.getElementsByTagName ("Plot")[0]
+        # print flowList, flowList.length
         for plot in plotXML.childNodes:
             if plot.nodeType != Node.TEXT_NODE:
                 if plot.nodeName == "Flow":
                     fromNode = ""
                     toNodes = []
-                    fromToArrowFlag = False
+                    fromToFlag = False
 
                     for item in plot.childNodes:
                         if item.nodeName == "From":
@@ -245,8 +250,25 @@ def plotTheFlows (dom, svgFile):
                         elif item.nodeName == "Description":
                             desc  = item.childNodes[0].nodeValue.strip ()
                         elif item.nodeName == "FromTo":
-                            print "FromTo"
                             fromToFlag = True
+                        elif item.nodeName == "SoonAfterPrevious":
+                            #print "SoonAfterPrevious"
+                            soonAfterPreviousFlag = True
+                            # 40% of separation between flows
+                            cy = cy - 0.6 * session.getProfile ().getFlowProfile ().getSeparation ()
+                        elif item.nodeName == "LongAfterPrevious":
+                            longAfterPreviousFlag = True
+                            # 60% more than usual
+                            cy = cy + session.getProfile ().getFlowProfile ().getSeparation ()
+                        elif item.nodeName == "AlongWithPrevious":
+                            alongWithPreviousFlag = True
+
+                            if cy == session.getProfile ().getCanvasProfile ().getUsableY1 () + (session.getProfile ().getNodeProfile ().getYSize () * 2):
+                                print "There cannot be an <AlongWithPrevious/> as the first flow. Check flows. Discarding tag!"
+                            elif cy > session.getProfile ().getCanvasProfile ().getUsableY1 () + (session.getProfile ().getNodeProfile ().getYSize () * 2):
+                                cy = cy - session.getProfile ().getFlowProfile ().getSeparation ()
+                            else:
+                                sys.exit ("Error with separation value in flow profile (check the flow profile). Aborting!")
 
                 # Great place for validity checks
                 # Cannot have multiple "From" items.
@@ -254,39 +276,42 @@ def plotTheFlows (dom, svgFile):
                 # If fromToFlag == True, then cannot have multiple "To" items
                 # Description cannot be null or empty string
                 # Cannot have multiple description items
-                print "Calling plotAFlow with",svgFile, fromNode, toNodes, desc, fromToFlag, cy
+                #print "Calling plotAFlow with",svgFile, fromNode, toNodes, desc, fromToFlag, cy
                 plotAFlow (svgFile, fromNode, toNodes, desc, fromToFlag, cy)
 
-                cy = cy + 100
+                cy = cy + session.getProfile ().getFlowProfile ().getSeparation ()
+
+    except IndexError:
+        sys.exit ("No <Plot/> tag found in *.cff file (should have been caught earlier?). Aborting!")
 
     return
 
+# Main....
 
-file = open (sys.argv[1], "r")
-data = file.read ()
-file.close ()
+session = CFPSession ()
 
-dom = parseString (data)
+callFlowFile = open (sys.argv[1], "r")
+data = callFlowFile.read ()
+callFlowFile.close ()
 
-getNodes (dom)
-# print "Here are the nodes"
-# print nodeNames
-# print nodeIDs
+callFlowFileDom = parseString (data)
 
-getFlows (dom)
+setProfileToUse (callFlowFileDom)
+getNodes (callFlowFileDom)
+
+getFlows (callFlowFileDom)
+#svgFile = open (session.getOutput (), "w")
 svgFile = open ("/tmp/output.svg", "w")
-writePreamble (svgFile)
-createNodeGraphics (svgFile)
-drawNodes (svgFile)
-plotTheFlows (dom, svgFile)
 
-svgFile.write ("</svg>")
+cfpDraw.writePreamble (session, svgFile)
+cfpDraw.createNodeGraphicsDefinitions (session, svgFile)
+cfpDraw.drawNodes (session, svgFile)
 
-svgFile.close ()
+plotTheFlows (callFlowFileDom, svgFile)
 
-#print nodes
+cfpDraw.writeEpilogue (session, svgFile)
 
-        
-#xmlTags = dom.getElementsByTagName (\"Flow\").size
-
-#print xmlTag
+# Set up session
+# Plot the flows
+# Perform requisite conversions
+# Done

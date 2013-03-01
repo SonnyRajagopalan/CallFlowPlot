@@ -48,3 +48,16 @@ are not interested in showing the details for.
 (j) Extra credit: Take an arbitrary wireshark dump (pcap file) and a filter text and apply
     the filter and generate  the call flow from the pcap file,  with clickable details for
     the flows.
+
+(k) Introduce <AlongWithPrevious/>,  <SoonAfterPrevious/> <LongAfterPrevious/> (will place
+    ellipsis between the current, and previous horizontals)
+
+(l) Introduce titles.
+
+(m) Sessions: a handle for everything each run of ./cfp.py should have in memory.
+
+(n) Pages.   Introduce page-length feature,  which is the  number of flows per  page. This
+    doesn't scale, as you  could have just one flow with a  large text segment. Perhaps we
+    should just limit the description to 140 characters.
+
+(o) Should self references just show a box over the node stem, instead of the arrow loop?
